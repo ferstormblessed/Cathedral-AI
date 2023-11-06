@@ -1,4 +1,4 @@
-package eki;
+package ai;
 
 import de.fhkiel.ki.cathedral.ai.Agent;
 import de.fhkiel.ki.cathedral.game.Building;
@@ -11,7 +11,7 @@ import java.util.Optional;
 
 public class Main {
   public static void main(String[] args) {
-    CathedralGUI.start(new CoolAI());
+    CathedralGUI.start(new RandomCleverAI(), new CoolAI());
   }
 }
 
