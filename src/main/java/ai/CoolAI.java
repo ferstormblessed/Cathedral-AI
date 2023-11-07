@@ -6,7 +6,6 @@ import de.fhkiel.ki.cathedral.game.Direction;
 import de.fhkiel.ki.cathedral.game.Game;
 import de.fhkiel.ki.cathedral.game.Placement;
 import de.fhkiel.ki.cathedral.game.Position;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -22,6 +21,8 @@ public class CoolAI implements Agent {
     public Optional<Placement> calculateTurn(Game game, int i, int i1) {
         List<Placement> possiblePlacements = new ArrayList<>();
         
+        
+
         for(Building building : game.getPlacableBuildings()){
             for(Direction direction : building.getTurnable().getPossibleDirections()){
                 for(int x=0; x<10; ++x){

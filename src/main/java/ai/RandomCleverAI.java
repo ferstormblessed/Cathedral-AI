@@ -74,28 +74,58 @@ public class RandomCleverAI implements Agent {
             .filter(building -> building.score() == highestScore)
             .map(building -> building.getPossiblePlacements(game))
             .flatMap(Collection::stream)
+            .distinct()
             .collect(Collectors.toList());
     }
 
     private List<Placement> placeNearCathedral(Game game, List<Placement> placements) {
-        List<Placement> places = new ArrayList<>();
+        List<Placement> placesNearCathedral = new ArrayList<>();
+        List<Placement> placesTouchingCathedral = new ArrayList<>();
 
         for (Placement placement : placements) {
             List<Position> silhouette = placement.building().silhouette(placement.direction())
                 .stream()
                 .map(position -> position.plus(placement.position()))
                 .filter(Position::isViable)
+                .distinct()
                 .collect(Collectors.toList());
+            
+            Position currentPosition = placement.position();
+            boolean isTouching = isTouchingCathedral(game, currentPosition);
 
             boolean isNearCathedral = silhouette
                 .stream()
                 .anyMatch(position -> Color.Blue == game.getBoard().getField()[position.y()][position.x()]);
 
-            if (isNearCathedral) {
-                places.add(placement);
+
+            if (isTouching) {
+                placesTouchingCathedral.add(placement);
+            }
+
+            if (isNearCathedral && !isTouching) {
+                placesNearCathedral.add(placement);
             }
         }
-        return places;
+        if (!placesTouchingCathedral.isEmpty()) {
+            return placesTouchingCathedral;
+        } else {
+            return placesNearCathedral;
+        }
+
+    }
+
+    private boolean isTouchingCathedral(Game game, Position pos) {
+        Color[][] field = game.getBoard().getField();
+        if (pos.plus(1, 0).isViable() && field[pos.y()][pos.x() + 1] == Color.Blue)  {
+            return true;
+        } else if (pos.minus(1, 0).isViable() && field[pos.y()][pos.x() - 1] == Color.Blue)  {
+            return true;
+        } else if (pos.plus(0, 1).isViable() && field[pos.y() + 1][pos.x()] == Color.Blue)  {
+            return true;
+        } else if (pos.minus(0, 1).isViable() && field[pos.y() - 1][pos.x()] == Color.Blue)  {
+            return true;
+        }
+        return false;
     }
 
     private List<Placement> placeNearOwnBuilding(Game game, List<Placement> placements) {
@@ -110,6 +140,7 @@ public class RandomCleverAI implements Agent {
                 .stream()
                 .map(position -> position.plus(placement.position()))
                 .filter(Position::isViable)
+                .distinct()
                 .collect(Collectors.toList());
 
             boolean isNearOwn = silhouette.stream()
@@ -141,6 +172,7 @@ public class RandomCleverAI implements Agent {
             .stream()
             .map(building -> building.getPossiblePlacements(game))
             .flatMap(Collection::stream)
+            .distinct()
             .collect(Collectors.toList());
 
     }
