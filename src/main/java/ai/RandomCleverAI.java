@@ -62,8 +62,9 @@ public class RandomCleverAI implements Agent {
     // evaluate turn (aka SCORE function)
     @Override
     public String evaluateLastTurn(Game game) {
-        int i = AreaControlledAroundCathedral(game, game.getCurrentPlayer());
-        return String.valueOf(game.getCurrentPlayer());
+        int i = AreaControlledAroundCathedral(game.getBoard(), game.getCurrentPlayer());
+        String s = String.format("Player --> %d, area --> %d", game.getCurrentPlayer().getId(), i);
+        return s;
     }
 
     public int Score(Placement placement) {
@@ -122,7 +123,6 @@ public class RandomCleverAI implements Agent {
         } else {
             return placesNearCathedral;
         }
-
     }
 
     private boolean isTouchingCathedral(Game game, Position pos) {
@@ -180,23 +180,32 @@ public class RandomCleverAI implements Agent {
         }
     }
 
-    private int AreaControlledAroundCathedral(Game game, Color player) {
+    private int AreaControlledAroundCathedral(Board board, Color player) {
         int colorID = player.getId();
-        List<Integer> idsAroundCathedral = IDAroundCathedral(game);
-        for (Integer num : idsAroundCathedral) {
-            System.out.println(String.format("%d", num));
-        }
-
+        List<Integer> idsAroundCathedral = IDAroundCathedral(board);
+        // for (Integer num : idsAroundCathedral) {
+        // System.out.println(String.format("%d", num));
+        // }
+        int area = 0;
         if (colorID == 2) {
             // i'm black
             // search for id --> 2(color black) and 3(owned by black)
-
+            for (Integer id : idsAroundCathedral) {
+                if (id == 2 || id == 3) {
+                    area += 1;
+                }
+            }
         } else {
             // i'm white
             // search for id --> 4(color white) and 5(owned by white)
+            for (Integer id : idsAroundCathedral) {
+                if (id == 4 || id == 5) {
+                    area += 1;
+                }
+            }
         }
 
-        return 0;
+        return area;
     }
 
     // this helper function returns all the color id's of the tiles around the
@@ -207,19 +216,18 @@ public class RandomCleverAI implements Agent {
     // # # C # #
     // / # C #
     // / # # #
-    private List<Integer> IDAroundCathedral(Game game) {
-        Board board = game.getBoard();
+    private List<Integer> IDAroundCathedral(Board board) {
         List<Integer> ids = new ArrayList<>();
         List<Position> cathedral = findCathedral(board);
 
         Color[][] field = board.getField();
-        System.out.println("print field from IDAroundCathedral");
+        System.out.println("\nprint field from IDAroundCathedral\n");
         printField(field);
         // add the checked positions and also the cathedral's positions
         Set<Position> checkedPositions = new HashSet<Position>();
 
         // adding cathedral's positions
-        System.out.println("Cathedral's position");
+        System.out.println("\nCathedral's position\n");
         for (Position pos : cathedral) {
             checkedPositions.add(pos);
             System.out.println(String.format("%d, %d", pos.x(), pos.y()));
@@ -236,7 +244,7 @@ public class RandomCleverAI implements Agent {
             Position LeftDownDiagonal = pos.plus(-1, 1);
             int idColor = -1;
 
-            System.out.println(String.format("\nchecking position --> (%d, %d)\n", pos.x(), pos.y()));
+            System.out.println(String.format("\nchecking position --> (%d, %d)", pos.x(), pos.y()));
 
             if (Left.isViable() && !checkedPositions.contains(Left)) {
                 checkedPositions.add(Left);
