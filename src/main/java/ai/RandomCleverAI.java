@@ -4,6 +4,7 @@ import de.fhkiel.ki.cathedral.ai.Agent;
 import de.fhkiel.ki.cathedral.game.Building;
 import de.fhkiel.ki.cathedral.game.Direction;
 import de.fhkiel.ki.cathedral.game.Game;
+import de.fhkiel.ki.cathedral.game.Board;
 import de.fhkiel.ki.cathedral.game.Placement;
 import de.fhkiel.ki.cathedral.game.Position;
 import de.fhkiel.ki.cathedral.game.Color;
@@ -13,6 +14,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.Random;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 public class RandomCleverAI implements Agent {
@@ -59,6 +62,7 @@ public class RandomCleverAI implements Agent {
     // evaluate turn (aka SCORE function)
     @Override
     public String evaluateLastTurn(Game game) {
+        int i = AreaControlledAroundCathedral(game, game.getCurrentPlayer());
         return String.valueOf(game.getCurrentPlayer());
     }
 
@@ -176,13 +180,17 @@ public class RandomCleverAI implements Agent {
         }
     }
 
-    private int AreaControlledAroundCathedral(Game game) {
-        Color myColor = game.getCurrentPlayer();
-        Integer colorID = myColor.getId();
+    private int AreaControlledAroundCathedral(Game game, Color player) {
+        int colorID = player.getId();
+        List<Integer> idsAroundCathedral = IDAroundCathedral(game);
+        for (Integer num : idsAroundCathedral) {
+            System.out.println(String.format("%d", num));
+        }
 
         if (colorID == 2) {
             // i'm black
             // search for id --> 2(color black) and 3(owned by black)
+
         } else {
             // i'm white
             // search for id --> 4(color white) and 5(owned by white)
@@ -200,11 +208,123 @@ public class RandomCleverAI implements Agent {
     // / # C #
     // / # # #
     private List<Integer> IDAroundCathedral(Game game) {
+        Board board = game.getBoard();
         List<Integer> ids = new ArrayList<>();
+        List<Position> cathedral = findCathedral(board);
 
-        // iterar por la 2D array de getField y sacar las posiciones que estan cerca de
-        // la catedral
+        Color[][] field = board.getField();
+        System.out.println("print field from IDAroundCathedral");
+        printField(field);
+        // add the checked positions and also the cathedral's positions
+        Set<Position> checkedPositions = new HashSet<Position>();
+
+        // adding cathedral's positions
+        System.out.println("Cathedral's position");
+        for (Position pos : cathedral) {
+            checkedPositions.add(pos);
+            System.out.println(String.format("%d, %d", pos.x(), pos.y()));
+        }
+
+        for (Position pos : cathedral) {
+            Position Left = pos.plus(-1, 0);
+            Position LeftUpDiagonal = pos.plus(-1, -1);
+            Position Up = pos.plus(0, -1);
+            Position RightUpDiagonal = pos.plus(1, -1);
+            Position Right = pos.plus(1, 0);
+            Position RightDownDiagonal = pos.plus(1, 1);
+            Position Down = pos.plus(0, 1);
+            Position LeftDownDiagonal = pos.plus(-1, 1);
+            int idColor = -1;
+
+            System.out.println(String.format("\nchecking position --> (%d, %d)\n", pos.x(), pos.y()));
+
+            if (Left.isViable() && !checkedPositions.contains(Left)) {
+                checkedPositions.add(Left);
+                idColor = field[Left.y()][Left.x()].getId();
+                System.out.println("Checking Left");
+                System.out.println(String.format("id --> %d, pos --> (%d, %d)", idColor, Left.x(), Left.y()));
+                ids.add(idColor);
+            }
+            if (LeftUpDiagonal.isViable() && !checkedPositions.contains(LeftUpDiagonal)) {
+                checkedPositions.add(LeftUpDiagonal);
+                idColor = field[LeftUpDiagonal.y()][LeftUpDiagonal.x()].getId();
+                System.out.println("Checking LeftUpDiagonal");
+                System.out.println(
+                        String.format("id --> %d, pos --> (%d, %d)", idColor, LeftUpDiagonal.x(), LeftUpDiagonal.y()));
+                ids.add(idColor);
+            }
+            if (Up.isViable() && !checkedPositions.contains(Up)) {
+                checkedPositions.add(Up);
+                idColor = field[Up.y()][Up.x()].getId();
+                System.out.println("Checking Up");
+                System.out.println(String.format("id --> %d, pos --> (%d, %d)", idColor, Up.x(), Up.y()));
+                ids.add(idColor);
+            }
+            if (RightUpDiagonal.isViable() && !checkedPositions.contains(RightUpDiagonal)) {
+                checkedPositions.add(RightUpDiagonal);
+                idColor = field[RightUpDiagonal.y()][RightUpDiagonal.x()].getId();
+                System.out.println("Checking RightUpDiagonal");
+                System.out.println(String.format("id --> %d, pos --> (%d, %d)", idColor, RightUpDiagonal.x(),
+                        RightUpDiagonal.y()));
+                ids.add(idColor);
+            }
+            if (Right.isViable() && !checkedPositions.contains(Right)) {
+                checkedPositions.add(Right);
+                idColor = field[Right.y()][Right.x()].getId();
+                System.out.println("Checking Right");
+                System.out.println(String.format("id --> %d, pos --> (%d, %d)", idColor, Right.x(), Right.y()));
+                ids.add(idColor);
+            }
+            if (RightDownDiagonal.isViable() && !checkedPositions.contains(RightDownDiagonal)) {
+                checkedPositions.add(RightDownDiagonal);
+                idColor = field[RightDownDiagonal.y()][RightDownDiagonal.x()].getId();
+                System.out.println("Checking RightDownDiagonal");
+                System.out.println(String.format("id --> %d, pos --> (%d, %d)", idColor, RightDownDiagonal.x(),
+                        RightDownDiagonal.y()));
+                ids.add(idColor);
+            }
+            if (Down.isViable() && !checkedPositions.contains(Down)) {
+                checkedPositions.add(Down);
+                idColor = field[Down.y()][Down.x()].getId();
+                System.out.println("Checking Down");
+                System.out.println(String.format("id --> %d, pos --> (%d, %d)", idColor, Down.x(), Down.y()));
+                ids.add(idColor);
+            }
+            if (LeftDownDiagonal.isViable() && !checkedPositions.contains(LeftDownDiagonal)) {
+                checkedPositions.add(LeftDownDiagonal);
+                idColor = field[LeftDownDiagonal.y()][LeftDownDiagonal.x()].getId();
+                System.out.println("Checking LeftDownDiagonal");
+                System.out.println(String.format("id --> %d, pos --> (%d, %d)", idColor, LeftDownDiagonal.x(),
+                        LeftDownDiagonal.y()));
+                ids.add(idColor);
+            }
+        }
         return ids;
+    }
+
+    private void printField(Color[][] field) {
+        for (int i = 0; i < field.length; i++) {
+            for (int j = 0; j < field[0].length; j++) {
+                System.out.print(String.format("[%d]", field[i][j].getId()));
+            }
+            System.out.println("");
+        }
+    }
+
+    private List<Position> findCathedral(Board board) {
+        Color[][] field = board.getField();
+        List<Position> cathedral = new ArrayList<Position>();
+        for (int i = 0; i < field.length; i++) {
+            for (int j = 0; j < field[0].length; j++) {
+                // found a tile of the cathedral
+                if (field[i][j] == Color.Blue) {
+                    // store the x --> j and y --> i coordinates
+                    Position pos = new Position(j, i);
+                    cathedral.add(pos);
+                }
+            }
+        }
+        return cathedral;
     }
 
     private List<Placement> placeLastPieces(Game game) {
