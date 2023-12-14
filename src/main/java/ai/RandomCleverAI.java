@@ -30,6 +30,30 @@ public class RandomCleverAI implements Agent {
         List<Placement> placesNearCathedral = placeNearCathedral(game, highestScoreBuildings);
         List<Placement> placesNearOwnBuilding = placeNearOwnBuilding(game, highestScoreBuildings);
 
+        // MAIN
+        // hacer sort de todos los posibles movimientos reespecto a su score
+        List<PlacementScore> placesNearCathedralWithScore = new ArrayList<PlacementScore>();
+        for (Placement placement : placesNearCathedral) {
+            PlacementScore p = new PlacementScore();
+            p.placement = placement;
+            // p.score = 0;
+            p.score = Score(game, placement);
+            placesNearCathedralWithScore.add(p);
+        }
+        System.out.println("Before sort");
+        for (PlacementScore p : placesNearCathedralWithScore) {
+            System.out.print(String.format(" %d ", p.score));
+        }
+        System.out.println("");
+        System.out.println("After sort");
+        // TODO: this is wrong FIX
+        // sortList(placesNearCathedralWithScore, 0,
+        // placesNearCathedralWithScore.size());
+        for (PlacementScore p : placesNearCathedralWithScore) {
+            System.out.print(String.format(" %d ", p.score));
+        }
+        System.out.println("");
+
         if (!placesNearCathedral.isEmpty()) {
             System.out.println("in near cathedral");
             System.out.println("Size of posible placements: " + placesNearCathedral.size());
@@ -67,8 +91,19 @@ public class RandomCleverAI implements Agent {
         return s;
     }
 
-    public int Score(Placement placement) {
-        return 0;
+    public int Score(Game game, Placement placement) {
+        int score = 0;
+        int areaAroundCathedralMultiplier = 5;
+        // HELPER
+        // hacer posible movimiento
+        if (game.takeTurn(placement)) {
+            score += areaAroundCathedralMultiplier
+                    * AreaControlledAroundCathedral(game.getBoard(), game.getCurrentPlayer());
+            game.undoLastTurn();
+        }
+        // calcular area que se gana
+
+        return score;
     }
 
     // get all the posible placements of the playable buildings with the highest
@@ -347,5 +382,35 @@ public class RandomCleverAI implements Agent {
 
     private Placement selectRandomPlacement(List<Placement> placements) {
         return placements.get(new Random().nextInt(placements.size()));
+    }
+
+    public static void sortList(List<PlacementScore> arr, int begin, int end) {
+        if (begin < end) {
+            int partitionIndex = partition(arr, begin, end);
+
+            sortList(arr, begin, partitionIndex - 1);
+            sortList(arr, partitionIndex + 1, end);
+        }
+    }
+
+    private static int partition(List<PlacementScore> arr, int begin, int end) {
+        PlacementScore pivot = arr.get(end);
+        int i = (begin);
+
+        for (int j = begin; j < end; j++) {
+            if (arr.get(j).score <= pivot.score) {
+                i++;
+
+                PlacementScore swapTemp = arr.get(i);
+                arr.set(i, arr.get(j));
+                arr.set(j, swapTemp);
+            }
+        }
+
+        PlacementScore swapTemp = arr.get(i + 1);
+        arr.set(i + 1, arr.get(end));
+        arr.set(end, swapTemp);
+
+        return i + 1;
     }
 }
