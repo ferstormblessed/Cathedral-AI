@@ -4,6 +4,7 @@ import de.fhkiel.ki.cathedral.ai.Agent;
 import de.fhkiel.ki.cathedral.game.Building;
 import de.fhkiel.ki.cathedral.game.Direction;
 import de.fhkiel.ki.cathedral.game.Game;
+import de.fhkiel.ki.cathedral.game.Turn;
 import de.fhkiel.ki.cathedral.game.Board;
 import de.fhkiel.ki.cathedral.game.Placement;
 import de.fhkiel.ki.cathedral.game.Position;
@@ -11,6 +12,8 @@ import de.fhkiel.ki.cathedral.game.Color;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.Random;
@@ -30,39 +33,51 @@ public class RandomCleverAI implements Agent {
         List<Placement> placesNearCathedral = placeNearCathedral(game, highestScoreBuildings);
         List<Placement> placesNearOwnBuilding = placeNearOwnBuilding(game, highestScoreBuildings);
 
-        // MAIN
+        // SORTING LISTS with respect to SCORE
         // hacer sort de todos los posibles movimientos reespecto a su score
         List<PlacementScore> placesNearCathedralWithScore = new ArrayList<PlacementScore>();
         for (Placement placement : placesNearCathedral) {
-            PlacementScore p = new PlacementScore();
-            p.placement = placement;
-            // p.score = 0;
-            p.score = Score(game, placement);
+            int score = Score(game, placement);
+            PlacementScore p = new PlacementScore(placement, score);
             placesNearCathedralWithScore.add(p);
         }
-        System.out.println("Before sort");
-        for (PlacementScore p : placesNearCathedralWithScore) {
-            System.out.print(String.format(" %d ", p.score));
+
+        List<PlacementScore> placesNearOwnBuildingWithScore = new ArrayList<PlacementScore>();
+        for (Placement placement : placesNearOwnBuilding) {
+            int score = Score(game, placement);
+            PlacementScore p = new PlacementScore(placement, score);
+            placesNearOwnBuildingWithScore.add(p);
         }
-        System.out.println("");
-        System.out.println("After sort");
-        // TODO: this is wrong FIX
-        // sortList(placesNearCathedralWithScore, 0,
-        // placesNearCathedralWithScore.size());
-        for (PlacementScore p : placesNearCathedralWithScore) {
-            System.out.print(String.format(" %d ", p.score));
+        // System.out.println("Before sort");
+        // for (PlacementScore p : placesNearCathedralWithScore) {
+        // System.out.print(String.format(" %s --> %d ",
+        // p.getPlacement().building().getName(), p.score));
+        // }
+        // System.out.println("");
+        // System.out.println("After sort");
+
+        // SORTING
+        Collections.sort(placesNearCathedralWithScore, Comparator.comparingInt(PlacementScore::getScore));
+        Collections.sort(placesNearOwnBuildingWithScore, Comparator.comparingInt(PlacementScore::getScore));
+        for (PlacementScore p : placesNearOwnBuildingWithScore) {
+            System.out.print(String.format(" %s --> %d ",
+                    p.getPlacement().building().getName(), p.score));
         }
         System.out.println("");
 
-        if (!placesNearCathedral.isEmpty()) {
+        if (!placesNearCathedralWithScore.isEmpty()) {
             System.out.println("in near cathedral");
-            System.out.println("Size of posible placements: " + placesNearCathedral.size());
-            return Optional.of(selectRandomPlacement(placesNearCathedral));
+            System.out.println("Size of posible placements: " + placesNearCathedralWithScore.size());
+            // Could return here random too because all are practically the same
+            // return Optional.of(selectRandomPlacement(placesNearCathedral));
+            return Optional
+                    .of(placesNearCathedralWithScore.get(placesNearCathedralWithScore.size() - 1).getPlacement());
 
-        } else if (!placesNearOwnBuilding.isEmpty()) {
+        } else if (!placesNearOwnBuildingWithScore.isEmpty()) {
             System.out.println("in near building");
-            System.out.println("Size of posible placements: " + placesNearOwnBuilding.size());
-            return Optional.of(selectRandomPlacement(placesNearOwnBuilding));
+            System.out.println("Size of posible placements: " + placesNearOwnBuildingWithScore.size());
+            return Optional
+                    .of(placesNearOwnBuildingWithScore.get(placesNearOwnBuildingWithScore.size() - 1).getPlacement());
         } else if (!highestScoreBuildings.isEmpty()) {
             System.out.println("in highest building");
             System.out.println("Size of posible placements: " + highestScoreBuildings.size());
@@ -86,22 +101,34 @@ public class RandomCleverAI implements Agent {
     // evaluate turn (aka SCORE function)
     @Override
     public String evaluateLastTurn(Game game) {
-        int i = AreaControlledAroundCathedral(game.getBoard(), game.getCurrentPlayer());
+        int i = AreaControlledAroundCathedral(game.getBoard().getField(), game.getCurrentPlayer().getId());
         String s = String.format("Player --> %d, area --> %d", game.getCurrentPlayer().getId(), i);
         return s;
     }
 
     public int Score(Game game, Placement placement) {
+        // create random int to add variaty to the scores for now
+        Random r = new Random();
+        int random = r.nextInt(10);
         int score = 0;
+
+        score += random;
+
         int areaAroundCathedralMultiplier = 5;
         // HELPER
         // hacer posible movimiento
-        if (game.takeTurn(placement)) {
+        if (game.takeTurn(placement, false)) {
+            // System.out.println(
+            // String.format("Move made is --> %s, current player is --> %d",
+            // placement.building().getName(),
+            // game.getCurrentPlayer().getId()));
+            // System.out.println("board after making move");
+            // printField(game.getBoard().getField());
             score += areaAroundCathedralMultiplier
-                    * AreaControlledAroundCathedral(game.getBoard(), game.getCurrentPlayer());
+                    * AreaControlledAroundCathedral(game.getBoard().getField(), game.getCurrentPlayer().getId());
+            // System.out.println(String.format("Resulting score --> %d", score));
             game.undoLastTurn();
         }
-        // calcular area que se gana
 
         return score;
     }
@@ -215,19 +242,29 @@ public class RandomCleverAI implements Agent {
         }
     }
 
-    private int AreaControlledAroundCathedral(Board board, Color player) {
-        int colorID = player.getId();
-        List<Integer> idsAroundCathedral = IDAroundCathedral(board);
+    private int AreaControlledAroundCathedral(Color[][] field, int player) {
+        List<Integer> idsAroundCathedral = IDAroundCathedral(field);
         // for (Integer num : idsAroundCathedral) {
-        // System.out.println(String.format("%d", num));
+        // System.out.print(String.format(" %d ", num));
         // }
+        // System.out.println("");
+        // System.out.println(String.format("current player --> %d", player));
         int area = 0;
-        if (colorID == 2) {
+
+        // i get the currentplayer which is the oppenent because i made the last move
+        // so the if is inverted sozusagen
+        // real ids
+        // black --> 2
+        // white --> 4
+        // but we do the inverse
+
+        if (player == 4) {
             // i'm black
             // search for id --> 2(color black) and 3(owned by black)
             for (Integer id : idsAroundCathedral) {
                 if (id == 2 || id == 3) {
                     area += 1;
+                    // System.out.println(String.format("found a match, area --> %d", area));
                 }
             }
         } else {
@@ -236,9 +273,11 @@ public class RandomCleverAI implements Agent {
             for (Integer id : idsAroundCathedral) {
                 if (id == 4 || id == 5) {
                     area += 1;
+                    // System.out.println(String.format("found a match, area --> %d", area));
                 }
             }
         }
+        // System.out.println(String.format("Area(score) --> %d", area));
 
         return area;
     }
@@ -251,21 +290,20 @@ public class RandomCleverAI implements Agent {
     // # # C # #
     // / # C #
     // / # # #
-    private List<Integer> IDAroundCathedral(Board board) {
+    private List<Integer> IDAroundCathedral(Color[][] field) {
         List<Integer> ids = new ArrayList<>();
-        List<Position> cathedral = findCathedral(board);
+        List<Position> cathedral = findCathedral(field);
 
-        Color[][] field = board.getField();
-        System.out.println("\nprint field from IDAroundCathedral\n");
-        printField(field);
+        // System.out.println("\nprint field from IDAroundCathedral\n");
+        // printField(field);
         // add the checked positions and also the cathedral's positions
         Set<Position> checkedPositions = new HashSet<Position>();
 
         // adding cathedral's positions
-        System.out.println("\nCathedral's position\n");
+        // System.out.println("\nCathedral's position\n");
         for (Position pos : cathedral) {
             checkedPositions.add(pos);
-            System.out.println(String.format("%d, %d", pos.x(), pos.y()));
+            // System.out.println(String.format("%d, %d", pos.x(), pos.y()));
         }
 
         for (Position pos : cathedral) {
@@ -279,66 +317,75 @@ public class RandomCleverAI implements Agent {
             Position LeftDownDiagonal = pos.plus(-1, 1);
             int idColor = -1;
 
-            System.out.println(String.format("\nchecking position --> (%d, %d)", pos.x(), pos.y()));
+            // System.out.println(String.format("\nchecking position --> (%d, %d)", pos.x(),
+            // pos.y()));
 
             if (Left.isViable() && !checkedPositions.contains(Left)) {
                 checkedPositions.add(Left);
                 idColor = field[Left.y()][Left.x()].getId();
-                System.out.println("Checking Left");
-                System.out.println(String.format("id --> %d, pos --> (%d, %d)", idColor, Left.x(), Left.y()));
+                // System.out.println("Checking Left");
+                // System.out.println(String.format("id --> %d, pos --> (%d, %d)", idColor,
+                // Left.x(), Left.y()));
                 ids.add(idColor);
             }
             if (LeftUpDiagonal.isViable() && !checkedPositions.contains(LeftUpDiagonal)) {
                 checkedPositions.add(LeftUpDiagonal);
                 idColor = field[LeftUpDiagonal.y()][LeftUpDiagonal.x()].getId();
-                System.out.println("Checking LeftUpDiagonal");
-                System.out.println(
-                        String.format("id --> %d, pos --> (%d, %d)", idColor, LeftUpDiagonal.x(), LeftUpDiagonal.y()));
+                // System.out.println("Checking LeftUpDiagonal");
+                // System.out.println(
+                // String.format("id --> %d, pos --> (%d, %d)", idColor, LeftUpDiagonal.x(),
+                // LeftUpDiagonal.y()));
                 ids.add(idColor);
             }
             if (Up.isViable() && !checkedPositions.contains(Up)) {
                 checkedPositions.add(Up);
                 idColor = field[Up.y()][Up.x()].getId();
-                System.out.println("Checking Up");
-                System.out.println(String.format("id --> %d, pos --> (%d, %d)", idColor, Up.x(), Up.y()));
+                // System.out.println("Checking Up");
+                // System.out.println(String.format("id --> %d, pos --> (%d, %d)", idColor,
+                // Up.x(), Up.y()));
                 ids.add(idColor);
             }
             if (RightUpDiagonal.isViable() && !checkedPositions.contains(RightUpDiagonal)) {
                 checkedPositions.add(RightUpDiagonal);
                 idColor = field[RightUpDiagonal.y()][RightUpDiagonal.x()].getId();
-                System.out.println("Checking RightUpDiagonal");
-                System.out.println(String.format("id --> %d, pos --> (%d, %d)", idColor, RightUpDiagonal.x(),
-                        RightUpDiagonal.y()));
+                // System.out.println("Checking RightUpDiagonal");
+                // System.out.println(String.format("id --> %d, pos --> (%d, %d)", idColor,
+                // RightUpDiagonal.x(),
+                // RightUpDiagonal.y()));
                 ids.add(idColor);
             }
             if (Right.isViable() && !checkedPositions.contains(Right)) {
                 checkedPositions.add(Right);
                 idColor = field[Right.y()][Right.x()].getId();
-                System.out.println("Checking Right");
-                System.out.println(String.format("id --> %d, pos --> (%d, %d)", idColor, Right.x(), Right.y()));
+                // System.out.println("Checking Right");
+                // System.out.println(String.format("id --> %d, pos --> (%d, %d)", idColor,
+                // Right.x(), Right.y()));
                 ids.add(idColor);
             }
             if (RightDownDiagonal.isViable() && !checkedPositions.contains(RightDownDiagonal)) {
                 checkedPositions.add(RightDownDiagonal);
                 idColor = field[RightDownDiagonal.y()][RightDownDiagonal.x()].getId();
-                System.out.println("Checking RightDownDiagonal");
-                System.out.println(String.format("id --> %d, pos --> (%d, %d)", idColor, RightDownDiagonal.x(),
-                        RightDownDiagonal.y()));
+                // System.out.println("Checking RightDownDiagonal");
+                // System.out.println(String.format("id --> %d, pos --> (%d, %d)", idColor,
+                // RightDownDiagonal.x(),
+                // RightDownDiagonal.y()));
                 ids.add(idColor);
             }
             if (Down.isViable() && !checkedPositions.contains(Down)) {
                 checkedPositions.add(Down);
                 idColor = field[Down.y()][Down.x()].getId();
-                System.out.println("Checking Down");
-                System.out.println(String.format("id --> %d, pos --> (%d, %d)", idColor, Down.x(), Down.y()));
+                // System.out.println("Checking Down");
+                // System.out.println(String.format("id --> %d, pos --> (%d, %d)", idColor,
+                // Down.x(), Down.y()));
                 ids.add(idColor);
             }
             if (LeftDownDiagonal.isViable() && !checkedPositions.contains(LeftDownDiagonal)) {
                 checkedPositions.add(LeftDownDiagonal);
                 idColor = field[LeftDownDiagonal.y()][LeftDownDiagonal.x()].getId();
-                System.out.println("Checking LeftDownDiagonal");
-                System.out.println(String.format("id --> %d, pos --> (%d, %d)", idColor, LeftDownDiagonal.x(),
-                        LeftDownDiagonal.y()));
+                // System.out.println("Checking LeftDownDiagonal");
+                // System.out.println(String.format("id --> %d, pos --> (%d, %d)", idColor,
+                // LeftDownDiagonal.x(),
+                // LeftDownDiagonal.y()));
                 ids.add(idColor);
             }
         }
@@ -354,8 +401,7 @@ public class RandomCleverAI implements Agent {
         }
     }
 
-    private List<Position> findCathedral(Board board) {
-        Color[][] field = board.getField();
+    private List<Position> findCathedral(Color[][] field) {
         List<Position> cathedral = new ArrayList<Position>();
         for (int i = 0; i < field.length; i++) {
             for (int j = 0; j < field[0].length; j++) {
@@ -382,35 +428,5 @@ public class RandomCleverAI implements Agent {
 
     private Placement selectRandomPlacement(List<Placement> placements) {
         return placements.get(new Random().nextInt(placements.size()));
-    }
-
-    public static void sortList(List<PlacementScore> arr, int begin, int end) {
-        if (begin < end) {
-            int partitionIndex = partition(arr, begin, end);
-
-            sortList(arr, begin, partitionIndex - 1);
-            sortList(arr, partitionIndex + 1, end);
-        }
-    }
-
-    private static int partition(List<PlacementScore> arr, int begin, int end) {
-        PlacementScore pivot = arr.get(end);
-        int i = (begin);
-
-        for (int j = begin; j < end; j++) {
-            if (arr.get(j).score <= pivot.score) {
-                i++;
-
-                PlacementScore swapTemp = arr.get(i);
-                arr.set(i, arr.get(j));
-                arr.set(j, swapTemp);
-            }
-        }
-
-        PlacementScore swapTemp = arr.get(i + 1);
-        arr.set(i + 1, arr.get(end));
-        arr.set(end, swapTemp);
-
-        return i + 1;
     }
 }
