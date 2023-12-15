@@ -11,6 +11,7 @@ import de.fhkiel.ki.cathedral.game.Position;
 import de.fhkiel.ki.cathedral.game.Color;
 
 import java.util.ArrayList;
+import java.util.Map;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -48,6 +49,13 @@ public class RandomCleverAI implements Agent {
             PlacementScore p = new PlacementScore(placement, score);
             placesNearOwnBuildingWithScore.add(p);
         }
+
+        List<PlacementScore> highestScoreBuildingsWithScore = new ArrayList<PlacementScore>();
+        for (Placement placement : highestScoreBuildings) {
+            int score = Score(game, placement);
+            PlacementScore p = new PlacementScore(placement, score);
+            placesNearOwnBuildingWithScore.add(p);
+        }
         // System.out.println("Before sort");
         // for (PlacementScore p : placesNearCathedralWithScore) {
         // System.out.print(String.format(" %s --> %d ",
@@ -57,39 +65,50 @@ public class RandomCleverAI implements Agent {
         // System.out.println("After sort");
 
         // SORTING
+        // se podria hacer una optimizacion aqui para no calcular cuando realmente no se
+        // necesita porque no se usan por ejemplo placesNearOwnBuilding y
+        // highestScoreBuilding cuando near cathedral todavia tiene elementos
         Collections.sort(placesNearCathedralWithScore, Comparator.comparingInt(PlacementScore::getScore));
         Collections.sort(placesNearOwnBuildingWithScore, Comparator.comparingInt(PlacementScore::getScore));
-        for (PlacementScore p : placesNearOwnBuildingWithScore) {
-            System.out.print(String.format(" %s --> %d ",
-                    p.getPlacement().building().getName(), p.score));
-        }
-        System.out.println("");
+        Collections.sort(highestScoreBuildingsWithScore, Comparator.comparingInt(PlacementScore::getScore));
+
+        // for (PlacementScore p : placesNearOwnBuildingWithScore) {
+        // System.out.print(String.format(" %s --> %d ",
+        // p.getPlacement().building().getName(), p.score));
+        // }
+        // System.out.println("");
 
         if (!placesNearCathedralWithScore.isEmpty()) {
             System.out.println("in near cathedral");
             System.out.println("Size of posible placements: " + placesNearCathedralWithScore.size());
-            // Could return here random too because all are practically the same
-            // return Optional.of(selectRandomPlacement(placesNearCathedral));
             return Optional
                     .of(placesNearCathedralWithScore.get(placesNearCathedralWithScore.size() - 1).getPlacement());
-
         } else if (!placesNearOwnBuildingWithScore.isEmpty()) {
             System.out.println("in near building");
             System.out.println("Size of posible placements: " + placesNearOwnBuildingWithScore.size());
             return Optional
                     .of(placesNearOwnBuildingWithScore.get(placesNearOwnBuildingWithScore.size() - 1).getPlacement());
-        } else if (!highestScoreBuildings.isEmpty()) {
+        } else if (!highestScoreBuildingsWithScore.isEmpty()) {
             System.out.println("in highest building");
-            System.out.println("Size of posible placements: " + highestScoreBuildings.size());
-            return Optional.of(selectRandomPlacement(highestScoreBuildings));
+            System.out.println("Size of posible placements: " + highestScoreBuildingsWithScore.size());
+            return Optional.of(highestScoreBuildingsWithScore.get(0).getPlacement());
         } else {
             List<Placement> lastPieces = placeLastPieces(game);
-            System.out.println("in last pieces");
-            System.out.println("Size of posible placements: " + lastPieces.size());
-            if (!lastPieces.isEmpty()) {
-                return Optional.of(selectRandomPlacement(lastPieces));
+            List<PlacementScore> lastPiecesWithScore = new ArrayList<PlacementScore>();
+
+            for (Placement placement : lastPieces) {
+                int score = Score(game, placement);
+                PlacementScore p = new PlacementScore(placement, score);
+                lastPiecesWithScore.add(p);
             }
-            System.out.println("Size of posible placements (should be empty): " + lastPieces.size());
+            Collections.sort(lastPiecesWithScore, Comparator.comparingInt(PlacementScore::getScore));
+
+            System.out.println("in last pieces");
+            System.out.println("Size of posible placements: " + lastPiecesWithScore.size());
+            if (!lastPiecesWithScore.isEmpty()) {
+                return Optional.of(lastPiecesWithScore.get(0).getPlacement());
+            }
+            System.out.println("Size of posible placements (should be empty): " + lastPiecesWithScore.size());
 
         }
 
@@ -112,11 +131,15 @@ public class RandomCleverAI implements Agent {
         int random = r.nextInt(10);
         int score = 0;
 
-        score += random;
+        // score += random;
 
         int areaAroundCathedralMultiplier = 5;
-        // HELPER
-        // hacer posible movimiento
+        int notInAreaControlledMulitiplier = 2;
+        int areaWonMulitiplier = 10;
+
+        Color[][] lastTurnField = game.getBoard().getField();
+        Map<Color, Integer> previousScore = game.score();
+
         if (game.takeTurn(placement, false)) {
             // System.out.println(
             // String.format("Move made is --> %s, current player is --> %d",
@@ -124,8 +147,13 @@ public class RandomCleverAI implements Agent {
             // game.getCurrentPlayer().getId()));
             // System.out.println("board after making move");
             // printField(game.getBoard().getField());
+            Color[][] currentTurnField = game.getBoard().getField();
+            int currentPlayer = game.getCurrentPlayer().getId();
             score += areaAroundCathedralMultiplier
-                    * AreaControlledAroundCathedral(game.getBoard().getField(), game.getCurrentPlayer().getId());
+                    * AreaControlledAroundCathedral(currentTurnField, currentPlayer);
+            score += PlaceNotInControlledTerritory(lastTurnField, placement, currentPlayer)
+                    * notInAreaControlledMulitiplier;
+            score += areaWon(currentPlayer, previousScore, game.score()) * areaWonMulitiplier;
             // System.out.println(String.format("Resulting score --> %d", score));
             game.undoLastTurn();
         }
@@ -240,6 +268,18 @@ public class RandomCleverAI implements Agent {
         } else {
             return nearWall;
         }
+    }
+
+    private int areaWon(int player, Map<Color, Integer> previosScore, Map<Color, Integer> scoreAfterMove) {
+        int score = 0;
+        if (player == 4) {
+            // im black
+            score = scoreAfterMove.get(Color.Black) - previosScore.get(Color.Black);
+        } else {
+            // im white
+            score = scoreAfterMove.get(Color.Black) - previosScore.get(Color.Black);
+        }
+        return score;
     }
 
     private int AreaControlledAroundCathedral(Color[][] field, int player) {
@@ -416,6 +456,54 @@ public class RandomCleverAI implements Agent {
         return cathedral;
     }
 
+    // Discourage player from placing pieces in already controlled territory
+    private int PlaceNotInControlledTerritory(Color[][] fieldLastTurn, Placement placement, int player) {
+        int score = 0;
+        // placement.pos = la coordena central de la pieza
+        // obtener las coordenadas, respecto al centro de la pieza
+        // buscar respecto a esas coordenadas en el field anterior
+        Position pieceCentralPosition = placement.position();
+        List<Position> buildingPositions = placement.building().turn(placement.direction());
+
+        List<Position> positionToCheck = new ArrayList<Position>();
+        for (Position pos : buildingPositions) {
+            Position p = pieceCentralPosition.plus(pos);
+            positionToCheck.add(p);
+        }
+
+        for (Position pos : positionToCheck) {
+            int colorID = fieldLastTurn[pos.y()][pos.x()].getId();
+
+            if (player == 4) {
+                // i'm black
+                // search for id --> 3(owned by black) is a minus
+                // because area is controlled by us
+                // search for id --> 0(not owned) is a plus
+                // we expand our territory
+                if (colorID == 3) {
+                    score -= 1;
+                }
+                if (colorID == 0) {
+                    score += 1;
+                }
+            } else {
+                // i'm white
+                // search for id --> 5(owned by black) is a minus
+                // because area is controlled by us
+                // search for id --> 0(not owned) is a plus
+                // we expand our territory
+                if (colorID == 5) {
+                    score -= 1;
+                }
+                if (colorID == 0) {
+                    score += 1;
+                }
+            }
+        }
+
+        return score;
+    }
+
     private List<Placement> placeLastPieces(Game game) {
         return game.getPlacableBuildings()
                 .stream()
@@ -423,7 +511,6 @@ public class RandomCleverAI implements Agent {
                 .flatMap(Collection::stream)
                 .distinct()
                 .collect(Collectors.toList());
-
     }
 
     private Placement selectRandomPlacement(List<Placement> placements) {
