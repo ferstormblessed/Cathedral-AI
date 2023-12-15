@@ -120,15 +120,20 @@ public class RandomCleverAI implements Agent {
     // evaluate turn (aka SCORE function)
     @Override
     public String evaluateLastTurn(Game game) {
-        int i = AreaControlledAroundCathedral(game.getBoard().getField(), game.getCurrentPlayer().getId());
-        String s = String.format("Player --> %d, area --> %d", game.getCurrentPlayer().getId(), i);
+        if (game.lastTurn().getTurnNumber() < 2) {
+            return "";
+        }
+        Placement p = game.lastTurn().getAction();
+        game.undoLastTurn();
+        int i = Score(game, p);
+        String s = String.format("Building --> %s, Score --> %d", game.lastTurn().getAction().building().getName(), i);
         return s;
     }
 
     public int Score(Game game, Placement placement) {
         // create random int to add variaty to the scores for now
-        Random r = new Random();
-        int random = r.nextInt(10);
+        // Random r = new Random();
+        // int random = r.nextInt(10);
         int score = 0;
 
         // score += random;
@@ -138,7 +143,6 @@ public class RandomCleverAI implements Agent {
         int areaWonMulitiplier = 10;
 
         Color[][] lastTurnField = game.getBoard().getField();
-        Map<Color, Integer> previousScore = game.score();
 
         if (game.takeTurn(placement, false)) {
             // System.out.println(
@@ -153,7 +157,7 @@ public class RandomCleverAI implements Agent {
                     * AreaControlledAroundCathedral(currentTurnField, currentPlayer);
             score += PlaceNotInControlledTerritory(lastTurnField, placement, currentPlayer)
                     * notInAreaControlledMulitiplier;
-            score += areaWon(currentPlayer, previousScore, game.score()) * areaWonMulitiplier;
+            score += areaWon(currentPlayer, lastTurnField, currentTurnField) * areaWonMulitiplier;
             // System.out.println(String.format("Resulting score --> %d", score));
             game.undoLastTurn();
         }
@@ -270,14 +274,30 @@ public class RandomCleverAI implements Agent {
         }
     }
 
-    private int areaWon(int player, Map<Color, Integer> previosScore, Map<Color, Integer> scoreAfterMove) {
+    private int areaWon(int player, Color[][] previosField, Color[][] currentField) {
         int score = 0;
         if (player == 4) {
             // im black
-            score = scoreAfterMove.get(Color.Black) - previosScore.get(Color.Black);
+            int prevScore = getAreaControlledByPlayer(2, previosField);
+            int currScore = getAreaControlledByPlayer(2, currentField);
+            score = currScore - prevScore;
         } else {
             // im white
-            score = scoreAfterMove.get(Color.Black) - previosScore.get(Color.Black);
+            int prevScore = getAreaControlledByPlayer(4, previosField);
+            int currScore = getAreaControlledByPlayer(4, currentField);
+            score = currScore - prevScore;
+        }
+        return score;
+    }
+
+    private int getAreaControlledByPlayer(int player, Color[][] field) {
+        int score = 0;
+        for (int i = 0; i < field.length; i++) {
+            for (int j = 0; j < field[0].length; j++) {
+                if (field[i][j].getId() == player || field[i][j].getId() == player + 1) {
+                    score += 1;
+                }
+            }
         }
         return score;
     }
