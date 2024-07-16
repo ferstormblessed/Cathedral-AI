@@ -1,5 +1,7 @@
-# kathedralML
+# Cathedral AI
 
-implemetation of an artificial intelligence that plays the game Cathedral.
+Implemetation of an artificial intelligence that plays the game Cathedral: https://en.wikipedia.org/wiki/Cathedral_(board_game).
 
-Graphic interface and documentation from https://github.com/WerthersEchte/cathedral
+# Technologies
+- Graphic interface library documentation from https://github.com/WerthersEchte/cathedral
+- Use of gradle and creation of a simple bash script to rebuild and run the program
