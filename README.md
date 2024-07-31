@@ -1,6 +1,6 @@
 # Cathedral AI
 
-Implemetation of an artificial intelligence that plays the game Cathedral: https://en.wikipedia.org/wiki/Cathedral_(board_game).
+Implementation of an artificial intelligence that plays the game Cathedral: https://en.wikipedia.org/wiki/Cathedral_(board_game).
 
 # Technologies
 - Graphic interface library documentation from https://github.com/WerthersEchte/cathedral
